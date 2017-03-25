@@ -50,6 +50,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
 
@@ -361,54 +362,41 @@ public class ProductController {
 		if (result.hasErrors()) {
 			return "admin-products-edit";
 		}
-		
+
 		Product newProduct = product.getProduct();
 		ProductAvailability newProductAvailability = null;
 		ProductPrice newProductPrice = null;
-		
+
 		Set<ProductPriceDescription> productPriceDescriptions = null;
-		
+
 		//get tax class
 		//TaxClass taxClass = newProduct.getTaxClass();
 		//TaxClass dbTaxClass = taxClassService.getById(taxClass.getId());
 		Set<ProductPrice> prices = new HashSet<ProductPrice>();
-		Set<ProductAvailability> availabilities = new HashSet<ProductAvailability>();	
+		Set<ProductAvailability> availabilities = new HashSet<ProductAvailability>();
 
 		if(product.getProduct().getId()!=null && product.getProduct().getId().longValue()>0) {
-		
-		
+
+
 			//get actual product
 			newProduct = productService.getById(product.getProduct().getId());
 			if(newProduct!=null && newProduct.getMerchantStore().getId().intValue()!=store.getId().intValue()) {
 				return "redirect:/admin/products/products.html";
 			}
-			
-			//copy properties
-			newProduct.setSku(product.getProduct().getSku());
-			newProduct.setRefSku(product.getProduct().getRefSku());
-			newProduct.setAvailable(product.getProduct().isAvailable());
-			newProduct.setDateAvailable(date);
-			newProduct.setManufacturer(product.getProduct().getManufacturer());
-			newProduct.setType(product.getProduct().getType());
-			newProduct.setProductHeight(product.getProduct().getProductHeight());
-			newProduct.setProductLength(product.getProduct().getProductLength());
-			newProduct.setProductWeight(product.getProduct().getProductWeight());
-			newProduct.setProductWidth(product.getProduct().getProductWidth());
-			newProduct.setProductVirtual(product.getProduct().isProductVirtual());
-			newProduct.setProductShipeable(product.getProduct().isProductShipeable());
-			newProduct.setTaxClass(product.getProduct().getTaxClass());
-			newProduct.setSortOrder(product.getProduct().getSortOrder());
+
+			copyPropertiesToNewProduct(product, date, newProduct);
+
 
 			Set<ProductAvailability> avails = newProduct.getAvailabilities();
 			if(avails !=null && avails.size()>0) {
-				
+
 				for(ProductAvailability availability : avails) {
 					if(availability.getRegion().equals(com.salesmanager.core.business.constants.Constants.ALL_REGIONS)) {
 
-						
+
 						newProductAvailability = availability;
 						Set<ProductPrice> productPrices = availability.getPrices();
-						
+
 						for(ProductPrice price : productPrices) {
 							if(price.isDefaultPrice()) {
 								newProductPrice = price;
@@ -416,32 +404,32 @@ public class ProductController {
 								productPriceDescriptions = price.getDescriptions();
 							} else {
 								prices.add(price);
-							}	
+							}
 						}
 					} else {
 						availabilities.add(availability);
 					}
 				}
 			}
-			
-			
+
+
 			for(ProductImage image : newProduct.getImages()) {
 				if(image.isDefaultImage()) {
 					product.setProductImage(image);
 				}
 			}
 		}
-		
+
 		if(newProductPrice==null) {
 			newProductPrice = new ProductPrice();
 			newProductPrice.setDefaultPrice(true);
 			newProductPrice.setProductPriceAmount(submitedPrice);
 		}
-		
+
 		if(product.getProductImage()!=null && product.getProductImage().getId() == null) {
 			product.setProductImage(null);
 		}
-		
+
 		if(productPriceDescriptions==null) {
 			productPriceDescriptions = new HashSet<ProductPriceDescription>();
 			for(ProductDescription description : product.getDescriptions()) {
@@ -453,13 +441,13 @@ public class ProductController {
 			}
 			newProductPrice.setDescriptions(productPriceDescriptions);
 		}
-		
+
 		newProduct.setMerchantStore(store);
-		
+
 		if(newProductAvailability==null) {
 			newProductAvailability = new ProductAvailability();
 		}
-		
+
 
 		newProductAvailability.setProductQuantity(product.getAvailability().getProductQuantity());
 		newProductAvailability.setProductQuantityOrderMin(product.getAvailability().getProductQuantityOrderMin());
@@ -467,77 +455,97 @@ public class ProductController {
 		newProductAvailability.setProduct(newProduct);
 		newProductAvailability.setPrices(prices);
 		availabilities.add(newProductAvailability);
-			
+
 		newProductPrice.setProductAvailability(newProductAvailability);
 		prices.add(newProductPrice);
-			
+
 		newProduct.setAvailabilities(availabilities);
 
 		Set<ProductDescription> descriptions = new HashSet<ProductDescription>();
 		if(product.getDescriptions()!=null && product.getDescriptions().size()>0) {
-			
+
 			for(ProductDescription description : product.getDescriptions()) {
 				description.setProduct(newProduct);
 				descriptions.add(description);
-				
+
 			}
 		}
-		
+
 		newProduct.setDescriptions(descriptions);
 		product.setDateAvailable(DateUtil.formatDate(date));
 
-		
-		
+
+
 		if(product.getImage()!=null && !product.getImage().isEmpty()) {
-			
 
-			
-			String imageName = product.getImage().getOriginalFilename();
-			
 
-			
-			ProductImage productImage = new ProductImage();
-			productImage.setDefaultImage(true);
-			productImage.setImage(product.getImage().getInputStream());
-			productImage.setProductImage(imageName);
-			
-			
-			List<ProductImageDescription> imagesDescriptions = new ArrayList<ProductImageDescription>();
+			updateProductImages(product, languages, newProduct);
 
-			for(Language l : languages) {
-				
-				ProductImageDescription imageDescription = new ProductImageDescription();
-				imageDescription.setName(imageName);
-				imageDescription.setLanguage(l);
-				imageDescription.setProductImage(productImage);
-				imagesDescriptions.add(imageDescription);
-				
-			}
-			
-			productImage.setDescriptions(imagesDescriptions);
-			productImage.setProduct(newProduct);
-			
-			newProduct.getImages().add(productImage);
-			
-			//productService.saveOrUpdate(newProduct);
-			
-			//product displayed
-			product.setProductImage(productImage);
-			
-			
+
 		} //else {
-			
+
 			//productService.saveOrUpdate(newProduct);
-			
+
 		//}
-		
+
 		productService.create(newProduct);
 		model.addAttribute("success","success");
 		
 		return "admin-products-edit";
 	}
-	
-	
+
+	private void copyPropertiesToNewProduct(@Valid @ModelAttribute("product") com.salesmanager.shop.admin.model.catalog.Product product, Date date, Product newProduct) {
+		//copy properties
+		newProduct.setSku(product.getProduct().getSku());
+		newProduct.setRefSku(product.getProduct().getRefSku());
+		newProduct.setAvailable(product.getProduct().isAvailable());
+		newProduct.setDateAvailable(date);
+		newProduct.setManufacturer(product.getProduct().getManufacturer());
+		newProduct.setType(product.getProduct().getType());
+		newProduct.setProductHeight(product.getProduct().getProductHeight());
+		newProduct.setProductLength(product.getProduct().getProductLength());
+		newProduct.setProductWeight(product.getProduct().getProductWeight());
+		newProduct.setProductWidth(product.getProduct().getProductWidth());
+		newProduct.setProductVirtual(product.getProduct().isProductVirtual());
+		newProduct.setProductShipeable(product.getProduct().isProductShipeable());
+		newProduct.setTaxClass(product.getProduct().getTaxClass());
+		newProduct.setSortOrder(product.getProduct().getSortOrder());
+	}
+
+	private void updateProductImages(@Valid @ModelAttribute("product") com.salesmanager.shop.admin.model.catalog.Product product, List<Language> languages, Product newProduct) throws IOException {
+		String imageName = product.getImage().getOriginalFilename();
+
+
+		ProductImage productImage = new ProductImage();
+		productImage.setDefaultImage(true);
+		productImage.setImage(product.getImage().getInputStream());
+		productImage.setProductImage(imageName);
+
+
+		List<ProductImageDescription> imagesDescriptions = new ArrayList<ProductImageDescription>();
+
+		for(Language l : languages) {
+
+            ProductImageDescription imageDescription = new ProductImageDescription();
+            imageDescription.setName(imageName);
+            imageDescription.setLanguage(l);
+            imageDescription.setProductImage(productImage);
+            imagesDescriptions.add(imageDescription);
+
+        }
+
+		productImage.setDescriptions(imagesDescriptions);
+		productImage.setProduct(newProduct);
+
+		newProduct.getImages().add(productImage);
+
+		//productService.saveOrUpdate(newProduct);
+
+		//product displayed
+		product.setProductImage(productImage);
+	}
+
+
 	/**
 	 * Creates a duplicate product with the same inner object graph
 	 * Will ignore SKU, reviews and images

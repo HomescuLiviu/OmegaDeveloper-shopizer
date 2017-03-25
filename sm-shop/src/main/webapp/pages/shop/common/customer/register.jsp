@@ -98,7 +98,7 @@ function isFormValid() {
 							   <s:message code="NotEmpty.customer.firstName" text="First name is required" var="msgFirstName"/>
 							   <form:input path="billing.firstName" cssClass="span8 required input form-control form-control-md" id="firstName" title="${msgFirstName}"/>
 							   <form:errors path="billing.firstName" cssClass="error" />
-								
+
 							</div>
 						</div>
 						<div class="control-group form-group">
@@ -181,8 +181,16 @@ function isFormValid() {
 							     <form:password path="checkPassword" class="span8 required checkPassword form-control form-control-md" id="passwordAgain" title="${msgRepeatPassword}"/>
 								 <form:errors path="checkPassword" cssClass="error" />
 							</div>
-						</div>						
-		
+						</div>
+
+					    <div class="control-group form-group">
+                            <label class="required control-label" for="freelancer"><s:message code="label.generic.freelancer" text="Are you a freelancer?"/></label>
+                            <div class="controls">
+                                 <s:message code="message.freelancer.required" text="Freelancer is required" var="msgFreelancer"/>
+                                 <form:checkbox path="freelancer" id="freelancer" title="${msgFreelancer}" />
+                            </div>
+                        </div>
+
 						<div class="control-group form-group">
 										<div class="controls">
 											

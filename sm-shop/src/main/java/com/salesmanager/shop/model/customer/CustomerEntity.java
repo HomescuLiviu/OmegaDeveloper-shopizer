@@ -1,11 +1,11 @@
 package com.salesmanager.shop.model.customer;
 
-import java.io.Serializable;
-
-import javax.validation.Valid;
-
+import com.salesmanager.core.model.catalog.product.Product;
 import org.hibernate.validator.constraints.Email;
 import org.hibernate.validator.constraints.NotEmpty;
+
+import javax.validation.Valid;
+import java.io.Serializable;
 
 public class CustomerEntity extends Customer implements Serializable {
 
@@ -26,6 +26,9 @@ public class CustomerEntity extends Customer implements Serializable {
 	private String language;
 	private String firstName;
 	private String lastName;
+
+	private boolean freelancer = false;
+	private Product product;
 	
 	private String encodedPassword = null;
 	private String clearPassword = null;
@@ -127,8 +130,19 @@ public class CustomerEntity extends Customer implements Serializable {
 		this.clearPassword = clearPassword;
 	}
 
+	public Product getProduct() {
+		return product;
+	}
 
+	public void setProduct(Product product) {
+		this.product = product;
+	}
 
-    
+	public boolean isFreelancer() {
+		return freelancer;
+	}
 
+	public void setFreelancer(boolean freelancer) {
+		this.freelancer = freelancer;
+	}
 }
